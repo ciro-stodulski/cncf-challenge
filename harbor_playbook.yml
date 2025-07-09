@@ -1,0 +1,11 @@
+- hosts: harbor
+  gather_facts: False
+  become: True
+  become_user: root
+  become_method: sudo
+    
+  roles:
+    - {role: commons, tags: ['commons', 'update', 'install']}
+    - {role: docker, tags: ['docker', 'install']}
+    - {role: letsencrypt, tags: ['letsencrypt', 'certbot', 'install']}
+    - {role: harbor, tags: ['harbor', 'install']}

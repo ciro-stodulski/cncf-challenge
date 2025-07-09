@@ -1,0 +1,34 @@
+- name: Download harbor packages
+  get_url:
+    url: https://github.com/goharbor/harbor/releases/download/v2.13.1/harbor-offline-installer-v2.13.1.tgz
+
+    dest: /tmp/harbor.tgz
+    mode: '0644'
+
+- name: Extract harbor packages
+  unarchive:
+    src: /tmp/harbor.tgz
+    dest: /tmp
+    remote_src: yes
+  args:
+    creates: /tmp/harbor
+
+
+- name: Put harbor template
+  template:
+    src: harbor.yml.j2
+    dest: /tmp/harbor/harbor.yml
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install Harbor and Capture Output
+  ansible.builtin.shell:
+    cmd: ./install.sh
+    chdir: /tmp/harbor
+  become: yes 
+  register: harbor_install_output
+
+- name: Display Harbor Install Log
+  ansible.builtin.debug:
+    var: harbor_install_output

@@ -1,0 +1,10 @@
+- hosts: kubernetes
+  gather_facts: True
+  become: True
+  become_user: root
+  become_method: sudo
+    
+  roles:
+    - {role: commons, tags: ['commons', 'update', 'install']}
+    - {role: docker, tags: ['docker', 'install']}
+    - {role: kubernetes, tags: ['kubernetes', 'install']} 
