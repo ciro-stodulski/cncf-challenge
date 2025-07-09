@@ -1,4 +1,4 @@
 inventory
 *.inventory
-cncf.key
-cncf.key.pub
+cncf_key
+cncf_key.pub
