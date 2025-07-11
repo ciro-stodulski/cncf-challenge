@@ -1,60 +1,73 @@
-- name: Check for active swap
-  command: grep -q swap /proc/swaps
-  register: swap_check
-  failed_when: false
-  changed_when: false
-
-- name: Disable swap in current session
-  command: swapoff -a
-  when: swap_check.rc == 0
-
-- name: Remove swap file from fstab
-  mount:
-    name: swap
-    fstype: swap
-    state: absent
-
-- name: Install packages for Docker repository
-  apt:
-    name:
-      - ca-certificates
-      - curl
-    state: present
-    update_cache: yes
-
-- name: Add Docker's official GPG key
-  apt_key:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    state: present
-
-
-- name: Get distribution release codename
-  command: lsb_release -cs
-  register: lsb_release_codename
-  changed_when: false
-
-- name: Add Docker repository
-  apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ lsb_release_codename.stdout }} stable"
-    state: present
-
-- name: Install Docker Engine and Docker Compose v2
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
-    state: present
-    update_cache: yes
-
-- name: Reload systemd daemon
-  systemd:
+- name: Restart containerd
+  ansible.builtin.systemd:
+    name: containerd
+    state: restarted
     daemon_reload: yes
 
-- name: Enable and start Docker service
-  systemd:
-    name: docker
-    enabled: yes
-    state: started
+- name: 1. Disable Swap
+  block:
+    - name: Check if swap is active
+      command: grep -q swap /proc/swaps
+      register: swap_check
+      failed_when: false
+      changed_when: false
+
+    - name: Disable swap for the current session
+      command: swapoff -a
+      when: swap_check.rc == 0
+      changed_when: false
+
+    - name: Remove swap entry from /etc/fstab
+      mount:
+        name: swap
+        fstype: swap
+        state: absent
+
+- name: 2. Install Docker
+  block:
+    - name: Install prerequisite packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+        update_cache: yes
+
+    - name: Ensure the APT keyrings directory exists
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Download Docker's official GPG key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+        force: true
+
+    - name: Add the Docker repository
+      apt_repository:
+        repo: >-
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc]
+          https://download.docker.com/linux/ubuntu
+          {{ ansible_distribution_release }} stable
+        state: present
+        filename: docker
+
+    - name: Install Docker and its components
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Enable and start the Docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started

@@ -1,16 +1,18 @@
 - name: update apt
+  become: yes
   apt:
     update_cache: yes
     cache_valid_time: 3600
 
 - name: install required packages
-  apt:
-    name: "{{ packages }}"
-    update_cache: yes
-    state: present 
+  become: yes
   vars:
     packages:
       - curl
       - wget
       - python3-pip
       - python3
+  apt:
+    name: "{{ packages }}"
+    update_cache: yes
+    state: present 

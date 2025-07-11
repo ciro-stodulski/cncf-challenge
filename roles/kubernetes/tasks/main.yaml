@@ -13,28 +13,52 @@
       - gnupg
     state: present
     update_cache: yes
-
-- name: Download Kubernetes v1.33
+    
+- name: Download Kubernetes v1.30 GPG key
   ansible.builtin.get_url:
-    url: https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key
+    url: https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key
     dest: /tmp/kubernetes-release.key
+    mode: '0644'
 
 - name: Convert GPG key to keyring format and save to /etc/apt/keyrings
   command: gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /tmp/kubernetes-release.key
   args:
     creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
-- name: Adjust keyring file permissions to read-only
-  file:
-    path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-    mode: '0644'
-
-- name: Create Kubernetes v1.33 repository file
+- name: Create Kubernetes v1.30 repository file
   copy:
     dest: /etc/apt/sources.list.d/kubernetes.list
-    content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /"
+    content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /"
     mode: '0644'
 
-- name: Update APT cache
-  apt:
-    update_cache: yes
+- name: Install Kubernetes packages (kubelet, kubeadm, kubectl)
+  ansible.builtin.apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+
+- name: Hold Kubernetes packages to prevent automatic updates
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+
+- name: Initialize Kubernetes master (ignoring CPU and memory preflight errors)
+  command: kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=NumCPU,Mem
+  args:
+    creates: /etc/kubernetes/admin.conf
+
+- name: Copy kubeconfig to ubuntu user's home
+  become: yes
+  shell: |
+    mkdir -p /home/ubuntu/.kube
+    cp /etc/kubernetes/admin.conf /home/ubuntu/.kube/config
+    chown ubuntu:ubuntu /home/ubuntu/.kube/config
+  args:
+    executable: /bin/bash
