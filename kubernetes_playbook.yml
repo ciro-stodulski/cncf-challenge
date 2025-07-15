@@ -16,6 +16,7 @@
   become_method: sudo
   roles:
     - { role: master, tags: ["master", "install"] }
+    - { role: contour, tags: ["contour", "install"] }
 
 - hosts: nodes
   gather_facts: True
