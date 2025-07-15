@@ -3,12 +3,11 @@
   become: True
   become_user: root
   become_method: sudo
-    
-  roles:
-    - {role: commons, tags: ['commons', 'update', 'install']}
-    - {role: docker, tags: ['docker', 'install']}
-    - {role: kubernetes, tags: ['kubernetes', 'install']} 
 
+  roles:
+    - { role: commons, tags: ["commons", "update", "install"] }
+    - { role: docker, tags: ["docker", "install"] }
+    - { role: kubernetes, tags: ["kubernetes", "install"] }
 
 - hosts: masters
   gather_facts: True
@@ -16,4 +15,12 @@
   become_user: root
   become_method: sudo
   roles:
-    - {role: master, tags: ['master', 'install']}
+    - { role: master, tags: ["master", "install"] }
+
+- hosts: nodes
+  gather_facts: True
+  become: True
+  become_user: root
+  become_method: sudo
+  roles:
+    - { role: nodes, tags: ["nodes"] }

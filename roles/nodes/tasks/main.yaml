@@ -1,0 +1,11 @@
+- name: Reset Kubernetes cluster state
+  become: yes
+  shell: "kubeadm reset --force"
+  ignore_errors: yes
+
+- name: Join node to cluster
+  become: yes
+  shell: "{{ hostvars[groups['masters'][0]].join_command }}"
+  args:
+    chdir: $HOME
+    creates: node.log
